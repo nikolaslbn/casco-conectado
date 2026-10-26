@@ -2,13 +2,167 @@
 <html>
 <head>
     <title>Casco Conectado</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; overflow: hidden; }
+        
+        .nav-superior { display: flex; align-items: center; justify-content: space-between; background: white; padding: 0 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; z-index: 1000; height: 70px; }
+        .logo-proyecto { font-weight: 900; font-size: 26px; color: #007bff; letter-spacing: 1px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        
+        .botones-nav { display: flex; gap: 10px; position: absolute; left: 50%; transform: translateX(-50%); }
+        .nav-btn { padding: 12px 24px; border: none; border-radius: 25px; font-size: 13px; font-weight: bold; cursor: pointer; color: #666; background: #eef2f5; transition: all 0.3s; }
+        .nav-btn.activo { background-color: #007bff; color: white; box-shadow: 0 4px 8px rgba(0,123,255,0.3); }
+        
+        .contenedor-principal { height: calc(100vh - 70px); width: 100%; display: flex; }
+        
+        #pantalla-mapa { width: 100%; height: 100%; display: block; }
+        #pantalla-alerta { width: 100%; height: 100%; display: none; flex-direction: row; }
+        
+        .panel-izquierdo { width: 400px; min-width: 400px; background: white; padding: 25px; box-sizing: border-box; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.05); z-index: 10; overflow-y: auto; }
+        .panel-derecho { flex: 1; height: 100%; position: relative; padding-left: 2px; }
+        
+        #pantalla-mapa iframe, .panel-derecho iframe { width: 100% !important; height: 100% !important; border: none; display: block; }
+        
+        h2 { text-align: center; font-size: 20px; color: #333; margin-top: 0; margin-bottom: 20px; font-weight: 800; }
+        .grilla-categorias { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .grilla-categorias input[type="radio"] { display: none; }
+        .grilla-categorias label { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 5px; border: 2px solid #eef2f5; border-radius: 12px; background: #fafcff; cursor: pointer; transition: all 0.2s; font-size: 13px; text-align: center; color: #555; }
+        .grilla-categorias input[type="radio"]:checked + label { border-color: #007bff; background-color: #e6f2ff; color: #007bff; font-weight: bold; }
+        .icono-cat { font-size: 24px; margin-bottom: 5px; }
+        
+        .fila-armas { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; margin-bottom: 20px; font-weight: bold; color: #444; font-size: 14px; }
+        .titulo-seccion { font-weight: bold; color: #444; font-size: 14px; margin-bottom: 10px; text-align: center; }
+        
+        .grilla-urgencia { display: flex; gap: 10px; margin-bottom: 20px; }
+        .grilla-urgencia input[type="radio"] { display: none; }
+        .grilla-urgencia label { flex: 1; padding: 10px; text-align: center; border-radius: 15px; cursor: pointer; font-weight: bold; color: white; opacity: 0.4; transition: all 0.2s; font-size: 14px; }
+        #urg_alta + label { background-color: #ff3b30; }
+        #urg_media + label { background-color: #ff9500; }
+        #urg_baja + label { background-color: #ffcc00; }
+        .grilla-urgencia input[type="radio"]:checked + label { opacity: 1; transform: scale(1.05); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        
+        .caja-ubicacion { background: #f8f9fa; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; border: 1px dashed #ccc; }
+        .texto-ayuda { font-size: 12px; color: #777; margin: 5px 0 0 0; }
+        
+        .btn-enviar { background-color: #007bff; color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: auto; }
+        .btn-enviar:hover { background-color: #0056b3; }
+        
+        #pantalla-historial { display: none; width: 100%; height: 100%; padding: 30px; overflow-y: auto; box-sizing: border-box; text-align: center; }
+    </style>
 </head>
 <body>
-    <h1>Red Vecinal - Casco Conectado</h1>
-    
-    <!-- Aquí aparece mágicamente el mapa -->
-    <div>
+    <div class="nav-superior">
+        <div class="logo-proyecto">Casco Conectado</div>
+        <div class="botones-nav">
+            <button id="btn-mapa" class="nav-btn activo" onclick="cambiarPestana('mapa')">MAPA ACTUAL</button>
+            <button id="btn-alerta" class="nav-btn" onclick="cambiarPestana('alerta')">EMITIR ALERTA</button>
+            <button id="btn-historial" class="nav-btn" onclick="cambiarPestana('historial')">HISTORIAL</button>
+        </div>
+        <div style="width: 150px;"></div>
+    </div>
+
+    <div class="contenedor-principal">
+        <div id="pantalla-mapa"></div>
+
+        <div id="pantalla-alerta">
+            <div class="panel-izquierdo">
+                <h2>Emitir Nueva Alerta</h2>
+                <form action="#" method="POST" style="display: flex; flex-direction: column; height: 100%;">
+                    {% csrf_token %}
+                    <div class="grilla-categorias">
+                        <input type="radio" id="cat_robo" name="categoria" value="robo" required>
+                        <label for="cat_robo"><span class="icono-cat">🕵️</span> Robo / Hurto</label>
+                        <input type="radio" id="cat_vandalismo" name="categoria" value="vandalismo">
+                        <label for="cat_vandalismo"><span class="icono-cat">💥</span> Vandalismo</label>
+                        <input type="radio" id="cat_desorden" name="categoria" value="desorden">
+                        <label for="cat_desorden"><span class="icono-cat">👥</span> Desorden</label>
+                        <input type="radio" id="cat_emergencia" name="categoria" value="emergencia">
+                        <label for="cat_emergencia"><span class="icono-cat">🚑</span> Emergencia</label>
+                        <input type="radio" id="cat_incendio" name="categoria" value="incendio">
+                        <label for="cat_incendio"><span class="icono-cat">🔥</span> Incendio</label>
+                        <input type="radio" id="cat_comercio" name="categoria" value="comercio">
+                        <label for="cat_comercio"><span class="icono-cat">🏪</span> Comercio Irregular</label>
+                    </div>
+
+                    <div class="fila-armas">
+                        <span>¿Armas involucradas?</span>
+                        <input type="checkbox" id="armas" name="armas" style="transform: scale(1.4);">
+                    </div>
+
+                    <div class="titulo-seccion">Nivel de Urgencia</div>
+                    <div class="grilla-urgencia">
+                        <input type="radio" id="urg_alta" name="urgencia" value="Alta" required>
+                        <label for="urg_alta">Alta</label>
+                        <input type="radio" id="urg_media" name="urgencia" value="Media">
+                        <label for="urg_media">Media</label>
+                        <input type="radio" id="urg_baja" name="urgencia" value="Baja">
+                        <label for="urg_baja">Baja</label>
+                    </div>
+
+                    <div class="caja-ubicacion">
+                        <div class="titulo-seccion" style="margin: 0;">Ubicación del Incidente</div>
+                        <p id="texto-ubicacion" class="texto-ayuda">Haz clic en el mapa de la derecha para fijar la alerta.</p>
+                        <input type="hidden" id="lat" name="lat" required>
+                        <input type="hidden" id="lon" name="lon" required>
+                    </div>
+
+                    <button type="submit" class="btn-enviar">Confirmar y Enviar Alerta</button>
+                </form>
+            </div>
+            <div class="panel-derecho" id="contenedor-mapa-alerta"></div>
+        </div>
+        
+        <div id="pantalla-historial">
+            <h2 style="color: #333;">Historial de Alertas</h2>
+            <p style="color: #666;">El registro de alertas se implementará aquí.</p>
+        </div>
+    </div>
+
+    <div id="mapa-original-source" style="display: none;">
         {{ mapa_folium|safe }}
     </div>
+
+    <script>
+        function cambiarPestana(pestana) {
+            document.getElementById('btn-mapa').classList.remove('activo');
+            document.getElementById('btn-alerta').classList.remove('activo');
+            document.getElementById('btn-historial').classList.remove('activo');
+            
+            document.getElementById('pantalla-mapa').style.display = 'none';
+            document.getElementById('pantalla-alerta').style.display = 'none';
+            document.getElementById('pantalla-historial').style.display = 'none';
+            
+            var mapaIframe = document.querySelector('#mapa-original-source iframe') || document.querySelector('iframe');
+            
+            if (pestana === 'mapa') {
+                document.getElementById('btn-mapa').classList.add('activo');
+                document.getElementById('pantalla-mapa').style.display = 'block';
+                if (mapaIframe) document.getElementById('pantalla-mapa').appendChild(mapaIframe);
+            } else if (pestana === 'alerta') {
+                document.getElementById('btn-alerta').classList.add('activo');
+                document.getElementById('pantalla-alerta').style.display = 'flex';
+                if (mapaIframe) document.getElementById('contenedor-mapa-alerta').appendChild(mapaIframe);
+            } else if (pestana === 'historial') {
+                document.getElementById('btn-historial').classList.add('activo');
+                document.getElementById('pantalla-historial').style.display = 'block';
+            }
+        }
+
+        window.onload = function() {
+            if(window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }
+            cambiarPestana('mapa');
+        };
+
+        window.addEventListener('message', function(event) {
+            if (event.data.lat && event.data.lon) {
+                document.getElementById('lat').value = event.data.lat;
+                document.getElementById('lon').value = event.data.lon;
+                
+                var textoUbicacion = document.getElementById('texto-ubicacion');
+                textoUbicacion.innerText = "📍 Ubicación fijada exitosamente.";
+                textoUbicacion.style.color = "#007bff";
+                textoUbicacion.style.fontWeight = "bold";
+            }
+        });
+    </script>
 </body>
 </html>
