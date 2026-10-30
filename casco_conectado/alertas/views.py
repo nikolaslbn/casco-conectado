@@ -1,25 +1,70 @@
 from django.shortcuts import render
 import folium
 from folium import Element, DivIcon
+from datetime import datetime
+import urllib.request
+import json
 
 def index(request):
     if 'alertas' not in request.session:
         request.session['alertas'] = []
 
+    nombres_completos = {
+        'robo': 'Robo / Hurto',
+        'vandalismo': 'Vandalismo',
+        'desorden': 'Desorden',
+        'emergencia': 'Emergencia',
+        'incendio': 'Incendio',
+        'comercio': 'Comercio Irregular'
+    }
+
+    iconos_cat = {
+        'Robo / Hurto': '🕵️',
+        'Robo': '🕵️',
+        'Vandalismo': '💥',
+        'Desorden': '👥',
+        'Emergencia': '🚑',
+        'Incendio': '🔥',
+        'Comercio Irregular': '🏪',
+        'Comercio': '🏪'
+    }
+
     if request.method == "POST":
-        categoria = request.POST.get("categoria", "")
+        cat_raw = request.POST.get("categoria", "")
         urgencia = request.POST.get("urgencia", "")
         armas_texto = "¡SÍ!" if request.POST.get("armas") else "No"
         lat = request.POST.get("lat", "")
         lon = request.POST.get("lon", "")
         
         if lat and lon:
+            hora_actual = datetime.now().strftime("%H:%M")
+            fecha_actual = datetime.now().strftime("%d/%m/%Y")
+            categoria_formateada = nombres_completos.get(cat_raw, cat_raw.capitalize())
+            emoji_asignado = iconos_cat.get(categoria_formateada, '⚠️')
+            
+            direccion_exacta = "Ubicación en el mapa"
+            try:
+                url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={lat}&lon={lon}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'CascoConectadoUSM/1.0'})
+                respuesta = urllib.request.urlopen(req, timeout=3)
+                datos = json.loads(respuesta.read().decode('utf-8'))
+                
+                if 'display_name' in datos:
+                    partes_direccion = datos['display_name'].split(',')
+                    direccion_exacta = ", ".join(partes_direccion[:2]).strip()
+            except Exception:
+                pass
+            
             nueva_alerta = {
                 'lat': float(lat),
                 'lon': float(lon),
-                'categoria': categoria.capitalize(),
+                'categoria': categoria_formateada,
                 'urgencia': urgencia,
-                'armas': armas_texto
+                'armas': armas_texto,
+                'hora': hora_actual,
+                'fecha': fecha_actual,
+                'emoji': emoji_asignado,
+                'direccion': direccion_exacta
             }
             request.session['alertas'].append(nueva_alerta)
             request.session.modified = True
@@ -37,31 +82,35 @@ def index(request):
         attr="Esri"
     )
     
-    iconos_cat = {
-        'Robo': '🕵️',
-        'Vandalismo': '💥',
-        'Desorden': '👥',
-        'Emergencia': '🚑',
-        'Incendio': '🔥',
-        'Comercio': '🏪'
-    }
-    
     colores_hex = {
         'Alta': '#ff3b30',
         'Media': '#ff9500',
         'Baja': '#ffcc00'
     }
 
-    for alerta in request.session.get('alertas', []):
+    alertas_guardadas = request.session.get('alertas', [])
+
+    for alerta in alertas_guardadas:
+        if alerta.get('categoria') == 'Comercio':
+            alerta['categoria'] = 'Comercio Irregular'
+        if alerta.get('categoria') == 'Robo':
+            alerta['categoria'] = 'Robo / Hurto'
+
         cat = alerta['categoria']
         urg = alerta['urgencia']
         armas = alerta['armas']
+        hora = alerta.get('hora', 'N/A')
+        fecha = alerta.get('fecha', 'N/A')
+        emoji = alerta.get('emoji', iconos_cat.get(cat, '⚠️'))
+        direccion = alerta.get('direccion', 'Valparaíso (Registro antiguo)')
         
-        emoji = iconos_cat.get(cat, '⚠️')
+        alerta['emoji'] = emoji
+        alerta['direccion'] = direccion
+        
         color_fondo = colores_hex.get(urg, '#007bff')
         
-        texto_hover = f"{emoji} {cat} | Urgencia: {urg} | Armas: {armas}"
-        texto_popup = f"<div style='text-align:center; min-width:140px; font-family:sans-serif;'><b>{emoji} {cat}</b><br>Urgencia: {urg}<br>Armas: {armas}</div>"
+        texto_hover = f"{emoji} {cat} | {fecha} {hora} | Urgencia: {urg}"
+        texto_popup = f"<div style='text-align:center; min-width:140px; font-family:sans-serif;'><b>{emoji} {cat}</b><br>Fecha: {fecha}<br>Hora: {hora}<br>Urgencia: {urg}<br>Armas: {armas}</div>"
 
         icono_personalizado = DivIcon(
             icon_size=(36, 36),
@@ -76,6 +125,9 @@ def index(request):
             icon=icono_personalizado
         ).add_to(mapa)
 
+    request.session['alertas'] = alertas_guardadas
+    request.session.modified = True
+
     script_inyectado = """
     <script>
         setTimeout(function(){
@@ -84,7 +136,6 @@ def index(request):
                 if (key.startsWith('map_')) { map_instance = window[key]; break; }
             }
             if (map_instance) {
-                // Mueve los botones de zoom hacia la esquina inferior derecha
                 if (map_instance.zoomControl) {
                     map_instance.zoomControl.setPosition('bottomright');
                 }
@@ -105,4 +156,4 @@ def index(request):
     mapa.get_root().html.add_child(Element(script_inyectado))
     
     mapa_html = mapa._repr_html_()
-    return render(request, "alertas/index.html", {"mapa_folium": mapa_html})
+    return render(request, "alertas/index.html", {"mapa_folium": mapa_html, "alertas": alertas_guardadas})
