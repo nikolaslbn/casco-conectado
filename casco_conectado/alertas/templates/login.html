@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Casco Conectado</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .contenedor-auth { width: 100%; max-width: 450px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 40px; box-sizing: border-box; }
+        
+        h1 { font-size: 26px; color: #1a1a1a; margin-top: 0; margin-bottom: 30px; font-weight: 800; text-align: center; }
+        
+        /* Formularios y Transiciones */
+        #form-login, #form-registro { display: none; }
+        #form-login.activo, #form-registro.activo { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .grupo-input { margin-bottom: 18px; position: relative; }
+        label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+        .input-caja { width: 100%; padding: 14px 15px; border: 2px solid #eef2f5; border-radius: 12px; font-size: 14px; box-sizing: border-box; outline: none; transition: all 0.3s; background-color: #fafcff; }
+        .input-caja:focus { border-color: #007bff; background-color: #fff; }
+        
+        /* Contenedor Flex para Nombre y Apellido */
+        .fila-doble { display: flex; gap: 15px; }
+        .fila-doble .grupo-input { flex: 1; }
+        
+        .btn-ojo { position: absolute; right: 15px; top: 38px; background: none; border: none; font-size: 18px; cursor: pointer; color: #888; padding: 0; }
+        
+        /* Checkbox Negocio */
+        .caja-negocio { background-color: #e6f2ff; border: 1px solid #cce5ff; border-radius: 12px; padding: 15px; margin-bottom: 18px; }
+        .check-fila { display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; }
+        .check-fila input { transform: scale(1.2); cursor: pointer; }
+        .check-fila span { font-size: 14px; font-weight: bold; color: #0056b3; }
+        
+        #campos-negocio { display: none; margin-top: 15px; animation: fadeIn 0.3s ease-out; }
+        
+        .link-olvido { display: block; text-align: right; color: #007bff; font-size: 13px; font-weight: 600; text-decoration: none; margin-bottom: 25px; }
+        
+        .btn-principal { background-color: #007bff; color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-bottom: 20px; }
+        .btn-principal:hover { background-color: #0056b3; }
+        
+        .texto-cambio { text-align: center; font-size: 14px; color: #666; }
+        .texto-cambio span { color: #007bff; font-weight: bold; cursor: pointer; }
+        .texto-cambio span:hover { text-decoration: underline; }
+        
+        .mensaje-error-dj { background-color: #ffe6e6; color: #d93025; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="{% url 'index' %}" style="position: absolute; top: 25px; left: 25px; text-decoration: none; color: #333; background: white; padding: 12px 20px; border-radius: 12px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: all 0.2s; z-index: 100;">
+    ⬅ Volver al Mapa
+</a>
+
+    <div class="contenedor-auth">
+        {% if messages %}
+        <div class="mensaje-error-dj">
+            {% for message in messages %}{{ message }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- PANTALLA DE INICIO DE SESIÓN -->
+        <div id="form-login" class="activo">
+            <h1>Iniciar Sesión</h1>
+            <form action="{% url 'login' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="login">
+                
+                <div class="grupo-input">
+                    <label>Correo electrónico</label>
+                    <input type="email" name="correo_login" class="input-caja" required>
+                </div>
+                
+                <div class="grupo-input">
+                    <label>Contraseña</label>
+                    <input type="password" name="pass_login" id="pass_login" class="input-caja" required>
+                    <button type="button" class="btn-ojo" onclick="togglePassword('pass_login', this)">👁️</button>
+                </div>
+                
+                <a href="#" class="link-olvido">¿Olvidaste tu contraseña?</a>
+                
+                <button type="submit" class="btn-principal">Acceder a Casco Conectado</button>
+                
+                <div class="texto-cambio">
+                    ¿No tienes una cuenta? <span onclick="cambiarFormulario('registro')">Regístrate aquí</span>
+                </div>
+            </form>
+        </div>
+
+        <!-- PANTALLA DE REGISTRO -->
+        <div id="form-registro">
+            <h1>Crear Cuenta</h1>
+            <form action="{% url 'login' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="registro">
+                
+                <div class="fila-doble">
+                    <div class="grupo-input">
+                        <label>Nombre</label>
+                        <input type="text" name="nombre" class="input-caja" required>
+                    </div>
+                    <div class="grupo-input">
+                        <label>Apellidos</label>
+                        <input type="text" name="apellidos" class="input-caja" required>
+                    </div>
+                </div>
+                
+                <div class="grupo-input">
+                    <label>Edad</label>
+                    <input type="number" name="edad" class="input-caja" min="1" max="120" oninput="this.value = Math.abs(this.value)" required>
+                </div>
+
+                <div class="caja-negocio">
+                    <label class="check-fila">
+                        <input type="checkbox" name="tiene_negocio" id="check_negocio" onchange="toggleNegocio()">
+                        <span>¿Eres dueño o administras un negocio local?</span>
+                    </label>
+                    
+                    <div id="campos-negocio">
+                        <label style="margin-top: 10px;">Nombre del Negocio (Aparecerá en tus alertas)</label>
+                        <input type="text" name="nombre_negocio" id="input_negocio" class="input-caja" style="margin-top: 5px;">
+                    </div>
+                </div>
+                
+                <div class="grupo-input">
+                    <label>Correo electrónico</label>
+                    <input type="email" name="correo_reg" class="input-caja" required>
+                </div>
+                
+                <div class="grupo-input">
+                    <label>Contraseña</label>
+                    <input type="password" name="pass1" id="pass_reg1" class="input-caja" minlength="6" required>
+                    <button type="button" class="btn-ojo" onclick="togglePassword('pass_reg1', this)">👁️</button>
+                </div>
+                
+                <div class="grupo-input">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" name="pass2" id="pass_reg2" class="input-caja" minlength="6" required>
+                    <button type="button" class="btn-ojo" onclick="togglePassword('pass_reg2', this)">👁️</button>
+                </div>
+                
+                <button type="submit" class="btn-principal" style="margin-top: 10px;">Completar Registro</button>
+                
+                <div class="texto-cambio">
+                    ¿Ya tienes una cuenta? <span onclick="cambiarFormulario('login')">Inicia Sesión</span>
+                </div>
+            </form>
+        </div>
+        
+    </div>
+
+    <script>
+        // Función para alternar entre Login y Registro
+        function cambiarFormulario(formId) {
+            document.getElementById('form-login').classList.remove('activo');
+            document.getElementById('form-registro').classList.remove('activo');
+            document.getElementById('form-' + formId).classList.add('activo');
+        }
+
+        // Función para desplegar el campo del nombre del negocio
+        function toggleNegocio() {
+            var checkbox = document.getElementById('check_negocio');
+            var panel = document.getElementById('campos-negocio');
+            var input = document.getElementById('input_negocio');
+            
+            if(checkbox.checked) {
+                panel.style.display = 'block';
+                input.required = true;
+            } else {
+                panel.style.display = 'none';
+                input.required = false;
+                input.value = '';
+            }
+        }
+
+        // Función para ver/ocultar contraseña
+        function togglePassword(inputId, btn) {
+            var input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                btn.innerText = "🔒";
+            } else {
+                input.type = "password";
+                btn.innerText = "👁️";
+            }
+        }
+    </script>
+</body>
+</html>

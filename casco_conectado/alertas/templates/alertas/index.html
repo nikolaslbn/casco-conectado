@@ -67,7 +67,26 @@
             <button id="btn-alerta" class="nav-btn" onclick="cambiarPestana('alerta')">EMITIR ALERTA</button>
             <button id="btn-historial" class="nav-btn" onclick="cambiarPestana('historial')">HISTORIAL</button>
         </div>
-        <div style="width: 150px;"></div>
+        <div style="width: 150px; text-align: right;">
+            {% if user.is_authenticated %}
+                <button onclick="document.getElementById('sidebar-ajustes').style.right = '0';" style="background: none; border: none; font-size: 26px; cursor: pointer; transition: transform 0.3s;" id="btn-tuerca">⚙️</button>
+            {% else %}
+                <a href="{% url 'login' %}" style="text-decoration: none; font-weight: bold; color: white; background: #007bff; padding: 10px 20px; border-radius: 20px; font-size: 14px;">Ingresar</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="sidebar-ajustes" style="position: fixed; top: 70px; right: -320px; width: 300px; height: calc(100vh - 70px); background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.1); z-index: 1001; transition: right 0.3s ease; padding: 25px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px;">
+            <h3 style="margin: 0; color: #333;">Menú de Ajustes</h3>
+            <button onclick="document.getElementById('sidebar-ajustes').style.right = '-320px';" style="background: none; border: none; font-size: 18px; cursor: pointer;">❌</button>
+        </div>
+        
+        <button onclick="document.getElementById('modal-config').style.display = 'flex';" style="background: #eef2f5; border: none; padding: 15px; border-radius: 12px; font-weight: bold; color: #444; cursor: pointer; text-align: left;">👤 Configurar Cuenta</button>
+        <button onclick="document.getElementById('modal-acerca').style.display = 'flex';" style="background: #eef2f5; border: none; padding: 15px; border-radius: 12px; font-weight: bold; color: #444; cursor: pointer; text-align: left;">📱 Acerca de la App</button>
+        <button onclick="if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen();" style="background: #1a1a1a; border: none; padding: 15px; border-radius: 12px; font-weight: bold; color: white; cursor: pointer; text-align: left;">📺 Pantalla Completa</button>
+        
+        <a href="{% url 'logout' %}" style="margin-top: auto; text-align: center; text-decoration: none; color: #d93025; font-weight: bold; padding: 15px; border-radius: 12px; background: #ffe6e6;">Cerrar Sesión</a>
     </div>
 
     <div class="contenedor-principal">
@@ -76,47 +95,64 @@
         <div id="pantalla-alerta">
             <div class="panel-izquierdo">
                 <h2>Emitir Nueva Alerta</h2>
-                <form action="#" method="POST" style="display: flex; flex-direction: column; height: 100%;">
-                    {% csrf_token %}
-                    <div class="grilla-categorias">
-                        <input type="radio" id="cat_robo" name="categoria" value="robo" required>
-                        <label for="cat_robo"><span class="icono-cat">🕵️</span> Robo / Hurto</label>
-                        <input type="radio" id="cat_vandalismo" name="categoria" value="vandalismo">
-                        <label for="cat_vandalismo"><span class="icono-cat">💥</span> Vandalismo</label>
-                        <input type="radio" id="cat_desorden" name="categoria" value="desorden">
-                        <label for="cat_desorden"><span class="icono-cat">👥</span> Desorden</label>
-                        <input type="radio" id="cat_emergencia" name="categoria" value="emergencia">
-                        <label for="cat_emergencia"><span class="icono-cat">🚑</span> Emergencia</label>
-                        <input type="radio" id="cat_incendio" name="categoria" value="incendio">
-                        <label for="cat_incendio"><span class="icono-cat">🔥</span> Incendio</label>
-                        <input type="radio" id="cat_comercio" name="categoria" value="comercio">
-                        <label for="cat_comercio"><span class="icono-cat">🏪</span> Comercio Irregular</label>
-                    </div>
+                {% if user.is_authenticated %}
+                    {% if request.session.edad > 12 %}
+                        <form id="form-alerta" action="#" method="POST" novalidate style="display: flex; flex-direction: column; height: 100%;">
+                            {% csrf_token %}
+                            <div class="grilla-categorias">
+                                <input type="radio" id="cat_robo" name="categoria" value="robo" required>
+                                <label for="cat_robo"><span class="icono-cat">🕵️</span> Robo / Hurto</label>
+                                <input type="radio" id="cat_vandalismo" name="categoria" value="vandalismo">
+                                <label for="cat_vandalismo"><span class="icono-cat">💥</span> Vandalismo</label>
+                                <input type="radio" id="cat_desorden" name="categoria" value="desorden">
+                                <label for="cat_desorden"><span class="icono-cat">👥</span> Desorden</label>
+                                <input type="radio" id="cat_emergencia" name="categoria" value="emergencia">
+                                <label for="cat_emergencia"><span class="icono-cat">🚑</span> Emergencia</label>
+                                <input type="radio" id="cat_incendio" name="categoria" value="incendio">
+                                <label for="cat_incendio"><span class="icono-cat">🔥</span> Incendio</label>
+                                <input type="radio" id="cat_comercio" name="categoria" value="comercio">
+                                <label for="cat_comercio"><span class="icono-cat">🏪</span> Comercio Irregular</label>
+                            </div>
 
-                    <div class="fila-armas">
-                        <span>¿Armas involucradas?</span>
-                        <input type="checkbox" id="armas" name="armas" style="transform: scale(1.4);">
-                    </div>
+                            <div class="fila-armas">
+                                <span>¿Armas involucradas?</span>
+                                <input type="checkbox" id="armas" name="armas" style="transform: scale(1.4);">
+                            </div>
 
-                    <div class="titulo-seccion">Nivel de Urgencia</div>
-                    <div class="grilla-urgencia">
-                        <input type="radio" id="urg_alta" name="urgencia" value="Alta" required>
-                        <label for="urg_alta">Alta</label>
-                        <input type="radio" id="urg_media" name="urgencia" value="Media">
-                        <label for="urg_media">Media</label>
-                        <input type="radio" id="urg_baja" name="urgencia" value="Baja">
-                        <label for="urg_baja">Baja</label>
-                    </div>
+                            <div class="titulo-seccion">Nivel de Urgencia</div>
+                            <div class="grilla-urgencia">
+                                <input type="radio" id="urg_alta" name="urgencia" value="Alta" required>
+                                <label for="urg_alta">Alta</label>
+                                <input type="radio" id="urg_media" name="urgencia" value="Media">
+                                <label for="urg_media">Media</label>
+                                <input type="radio" id="urg_baja" name="urgencia" value="Baja">
+                                <label for="urg_baja">Baja</label>
+                            </div>
 
-                    <div class="caja-ubicacion">
-                        <div class="titulo-seccion" style="margin: 0;">Ubicación del Incidente</div>
-                        <p id="texto-ubicacion" class="texto-ayuda">Haz clic en el mapa de la derecha para fijar la alerta.</p>
-                        <input type="hidden" id="lat" name="lat" required>
-                        <input type="hidden" id="lon" name="lon" required>
-                    </div>
+                            <div class="caja-ubicacion">
+                                <div class="titulo-seccion" style="margin: 0;">Ubicación del Incidente</div>
+                                <p id="texto-ubicacion" class="texto-ayuda">Haz clic en el mapa de la derecha para fijar la alerta.</p>
+                                <input type="hidden" id="lat" name="lat" required>
+                                <input type="hidden" id="lon" name="lon" required>
+                            </div>
 
-                    <button type="submit" class="btn-enviar">Confirmar y Enviar Alerta</button>
-                </form>
+                            <button type="submit" class="btn-enviar">Confirmar y Enviar Alerta</button>
+                        </form>
+                    {% else %}
+                        <div style="background: #fff3cd; color: #856404; padding: 25px; border-radius: 12px; text-align: center; margin-top: 20px;">
+                            <div style="font-size: 40px; margin-bottom: 10px;">⛔</div>
+                            <h3 style="margin-top: 0;">Acceso Restringido</h3>
+                            <p style="font-weight: bold;">Lo sentimos, debes ser mayor de 12 años para emitir alertas de seguridad.</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div style="background: #e6f2ff; color: #0056b3; padding: 35px 20px; border-radius: 12px; text-align: center; margin-top: 20px;">
+                        <div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
+                        <h3 style="margin-top: 0;">Inicio de Sesión Requerido</h3>
+                        <p style="font-size: 14px; margin-bottom: 25px;">Para garantizar la seguridad de la comunidad, solo los usuarios registrados pueden enviar notificaciones.</p>
+                        <a href="{% url 'login' %}" style="text-decoration: none; background: #007bff; color: white; padding: 14px 30px; border-radius: 25px; font-weight: bold;">Acceder a mi cuenta</a>
+                    </div>
+                {% endif %}
             </div>
             <div class="panel-derecho" id="contenedor-mapa-alerta"></div>
         </div>
@@ -129,6 +165,10 @@
                     <div class="tarjeta-alerta urg-{{ alerta.urgencia|lower }}">
                         <div class="info-principal">
                             <span class="cat-titulo">{{ alerta.emoji }} {{ alerta.categoria }}</span>
+                            <span style="font-size: 13px; color: #555; background: #eee; padding: 4px 8px; border-radius: 6px; display: inline-block; margin-bottom: 4px;">
+                                👤 Emitido por: <b>{{ alerta.emisor|default:"Usuario Anónimo" }}</b> 
+                                {% if alerta.negocio %}(🏪 {{ alerta.negocio }}){% endif %}
+                            </span>
                             <span class="detalles-alerta" style="color: #007bff; font-weight: bold; margin-bottom: 4px;">📍 {{ alerta.direccion }}</span>
                             <span class="detalles-alerta">Urgencia: <b>{{ alerta.urgencia }}</b> | Armas: <b>{{ alerta.armas }}</b></span>
                         </div>
@@ -147,6 +187,42 @@
 
     <div id="mapa-original-source" style="display: none;">
         {{ mapa_folium|safe }}
+    </div>
+
+    <div id="modal-error" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <div style="font-size: 45px; margin-bottom: 10px;">⚠️</div>
+            <h3 style="margin-top: 0; color: #d93025; font-size: 22px;">Faltan Datos</h3>
+            <p style="color: #555; margin-bottom: 25px; line-height: 1.5; font-size: 15px;">Asegúrate de seleccionar la categoría, la urgencia y marcar la ubicación en el mapa para poder enviar la alerta.</p>
+            <button onclick="document.getElementById('modal-error').style.display='none'" style="background: #007bff; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 15px; transition: background 0.2s;">Entendido</button>
+        </div>
+    </div>
+
+    <div id="modal-acerca" style="display: none; position: fixed; top:0; left:0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url('https://images.unsplash.com/photo-1596423735880-5c6a1e35d1f8?auto=format&fit=crop&w=800&q=80') center/cover; padding: 40px; border-radius: 20px; max-width: 500px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); text-align: center; position: relative;">
+            <button onclick="document.getElementById('modal-acerca').style.display = 'none';" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer;">❌</button>
+            <h2 style="color: #007bff; font-weight: 900; margin-top: 0; font-size: 28px;">Casco Conectado</h2>
+            <p style="font-weight: bold; color: #444; font-size: 16px;">Desarrollado por "Grupo 11, Entonces":<br>Nicolás, Tomasho, Anthon y Jose</p>
+            <p style="color: #555; text-align: justify; font-size: 14px; line-height: 1.6; margin-top: 20px;">Nuestra aplicación aborda la urgente necesidad de seguridad y conexión entre los locatarios del Casco Histórico y Barrio Puerto de Valparaíso. Mediante un sistema de geolocalización, permitimos que la comunidad emita alertas instantáneas categorizadas por nivel de urgencia, fortaleciendo la respuesta vecinal colaborativa frente a incidentes de comercio irregular, delincuencia o emergencias médicas.</p>
+        </div>
+    </div>
+
+    <div id="modal-config" style="display: none; position: fixed; top:0; left:0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 40px; border-radius: 20px; width: 100%; max-width: 400px; position: relative;">
+            <button onclick="document.getElementById('modal-config').style.display = 'none';" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer;">❌</button>
+            <h2 style="margin-top: 0; color: #333; text-align: center;">Configurar Cuenta</h2>
+            <p style="font-size: 14px; color: #666; text-align: center; margin-top: -10px; margin-bottom: 20px;">
+    Cuenta conectada: <strong>{{ request.user.email }}</strong>
+</p>
+            <form action="#" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+                {% csrf_token %}
+                <label style="font-size: 13px; font-weight: bold; color: #666;">Actualizar Nombre del Negocio</label>
+                <input type="text" name="nuevo_negocio" placeholder="Ej: Mi Tienda" value="{{ request.session.nombre_negocio|default:'' }}" style="padding: 12px; border: 2px solid #eee; border-radius: 10px;">
+                <label style="font-size: 13px; font-weight: bold; color: #666; margin-top: 10px;">Cambiar Contraseña</label>
+                <input type="password" name="nueva_pass" placeholder="Nueva contraseña" style="padding: 12px; border: 2px solid #eee; border-radius: 10px;">
+                <button type="button" onclick="alert('Configuración actualizada exitosamente.'); document.getElementById('modal-config').style.display='none';" style="background: #007bff; color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px;">Guardar Cambios</button>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -191,6 +267,24 @@
                 textoUbicacion.style.fontWeight = "bold";
             }
         });
+
+        var formAlerta = document.getElementById('form-alerta');
+        if (formAlerta) {
+            formAlerta.addEventListener('submit', function(evento) {
+                const categoria = document.querySelector('input[name="categoria"]:checked');
+                const urgencia = document.querySelector('input[name="urgencia"]:checked');
+                const inputLat = document.querySelector('input[name="lat"]');
+                const inputLon = document.querySelector('input[name="lon"]');
+                
+                const lat = inputLat ? inputLat.value : "";
+                const lon = inputLon ? inputLon.value : "";
+
+                if (!categoria || !urgencia || lat === "" || lon === "") {
+                    evento.preventDefault(); 
+                    document.getElementById('modal-error').style.display = 'flex';
+                }
+            }); 
+        }
     </script>
 </body>
 </html>
