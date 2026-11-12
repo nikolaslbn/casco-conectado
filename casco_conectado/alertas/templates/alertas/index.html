@@ -60,6 +60,25 @@
     </style>
 </head>
 <body>
+<div id="notificacion-flotante" style="display: none; position: fixed; top: 25px; right: 25px; z-index: 99999; min-width: 320px; max-width: 380px; padding: 18px; border-radius: 14px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.35); transition: all 0.3s ease; font-family: sans-serif;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <strong id="notif-titulo" style="font-size: 16px; letter-spacing: 0.5px;">🚨 ALERTA</strong>
+        <button onclick="cerrarNotificacion()" style="background: rgba(0,0,0,0.2); border: none; color: white; width: 26px; height: 26px; border-radius: 50%; font-size: 14px; cursor: pointer; font-weight: bold;">✕</button>
+    </div>
+    <div id="notif-cuerpo" style="font-size: 14px; margin-bottom: 10px; line-height: 1.4;"></div>
+    <div id="notif-pie" style="font-size: 12px; opacity: 0.9; border-top: 1px solid rgba(255,255,255,0.25); padding-top: 6px; display: flex; justify-content: space-between;"></div>
+</div>
+
+<style>
+@keyframes latidoUrgente {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.8); }
+    50% { transform: scale(1.03); box-shadow: 0 0 25px 10px rgba(220, 53, 69, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+.alerta-alta-anim {
+    animation: latidoUrgente 1s infinite;
+}
+</style>
     <div class="nav-superior">
         <div class="logo-proyecto">Casco Conectado</div>
         <div class="botones-nav">
@@ -130,12 +149,29 @@
                             </div>
 
                             <div class="caja-ubicacion">
-                                <div class="titulo-seccion" style="margin: 0;">Ubicación del Incidente</div>
-                                <p id="texto-ubicacion" class="texto-ayuda">Haz clic en el mapa de la derecha para fijar la alerta.</p>
-                                <input type="hidden" id="lat" name="lat" required>
-                                <input type="hidden" id="lon" name="lon" required>
-                            </div>
+    <div class="titulo-seccion" style="margin: 0;">Ubicación del Incidente</div>
+    
+    <!-- Campos ocultos que guardan las coordenadas para Django -->
+    <input type="hidden" id="lat" name="lat" required>
+    <input type="hidden" id="lon" name="lon" required>
 
+    <!-- Contenedor principal de Ubicación GPS -->
+    <div style="background: #f0f7ff; border: 1px solid #cce0ff; padding: 12px; border-radius: 12px; text-align: center; margin-top: 10px;">
+        <div id="texto-ubicacion" style="font-size: 14px; font-weight: bold; color: #0056b3; margin-bottom: 6px;">
+            📡 Buscando tu ubicación por GPS...
+        </div>
+        
+        <div style="display: flex; justify-content: center; gap: 10px; align-items: center; margin-top: 10px;">
+        <button type="button" id="btn-modo-gps" onclick="obtenerUbicacionGPS()" style="flex: 1; background: #007bff; color: white; border: none; padding: 10px 12px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s;">
+            🎯 Usar mi GPS
+        </button>
+
+        <button type="button" id="btn-modo-manual" onclick="activarModoManual()" style="flex: 1; background: #e2e8f0; color: #475569; border: none; padding: 10px 12px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s;">
+            📍 Elegir en el mapa
+        </button>
+    </div>
+    </div>
+</div>
                             <button type="submit" class="btn-enviar">Confirmar y Enviar Alerta</button>
                         </form>
                     {% else %}
@@ -242,9 +278,15 @@
                 document.getElementById('pantalla-mapa').style.display = 'block';
                 if (mapaIframe) document.getElementById('pantalla-mapa').appendChild(mapaIframe);
             } else if (pestana === 'alerta') {
-                document.getElementById('btn-alerta').classList.add('activo');
-                document.getElementById('pantalla-alerta').style.display = 'flex';
-                if (mapaIframe) document.getElementById('contenedor-mapa-alerta').appendChild(mapaIframe);
+        document.getElementById('btn-alerta').classList.add('activo');
+        document.getElementById('pantalla-alerta').style.display = 'flex';
+        
+        if (mapaIframe) document.getElementById('contenedor-mapa-alerta').appendChild(mapaIframe);
+
+        var inputLat = document.getElementById('lat');
+        if (inputLat && !inputLat.value) {
+            obtenerUbicacionGPS();
+        }
             } else if (pestana === 'historial') {
                 document.getElementById('btn-historial').classList.add('activo');
                 document.getElementById('pantalla-historial').style.display = 'block';
@@ -255,18 +297,183 @@
             if(window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }
             cambiarPestana('mapa');
         };
+        let modoUbicacionActual = 'gps';
 
-        window.addEventListener('message', function(event) {
-            if (event.data.lat && event.data.lon) {
-                document.getElementById('lat').value = event.data.lat;
-                document.getElementById('lon').value = event.data.lon;
-                
-                var textoUbicacion = document.getElementById('texto-ubicacion');
-                textoUbicacion.innerText = "📍 Ubicación fijada exitosamente.";
-                textoUbicacion.style.color = "#007bff";
-                textoUbicacion.style.fontWeight = "bold";
+    // Función que convierte Latitud y Longitud en el nombre de la calle
+    function buscarNombreCalle(lat, lon, prefijo) {
+        var textoUbicacion = document.getElementById('texto-ubicacion');
+        if (!textoUbicacion) return;
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.address) {
+                    var calle = data.address.road || data.address.pedestrian || data.address.suburb || "Ubicación seleccionada";
+                    var numero = data.address.house_number ? " " + data.address.house_number : "";
+                    var ciudad = data.address.city || data.address.town || data.address.municipality || "Valparaíso";
+                    textoUbicacion.innerText = `${prefijo}: ${calle}${numero}, ${ciudad}`;
+                } else {
+                    textoUbicacion.innerText = `${prefijo} correctamente.`;
+                }
+            })
+            .catch(() => {
+                textoUbicacion.innerText = `${prefijo} correctamente.`;
+            });
+    }
+
+    // Función que borra el pin manual puesto por el usuario en el mapa de Folium
+    function limpiarPinManualDelMapa() {
+        try {
+            var iframe = document.querySelector('#contenedor-mapa-alerta iframe') || document.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+                var winMapa = iframe.contentWindow;
+
+                if (winMapa.marcadorActual) {
+                    winMapa.marcadorActual.remove();
+                    winMapa.marcadorActual = null;
+                }
+
+                for (var key in winMapa) {
+                    if (key.startsWith('map_') && winMapa[key] && winMapa[key].eachLayer) {
+                        var mapaLeaflet = winMapa[key];
+                        mapaLeaflet.eachLayer(function(layer) {
+                            if (layer instanceof winMapa.L.Popup || (layer instanceof winMapa.L.Marker && !layer._popup)) {
+                                mapaLeaflet.removeLayer(layer);
+                            } else if (layer instanceof winMapa.L.Marker && layer._popup && layer._popup._content && String(layer._popup._content).includes('Lat:')) {
+                                mapaLeaflet.removeLayer(layer);
+                            }
+                        });
+                    }
+                }
             }
-        });
+        } catch (e) {
+            console.log("No se pudo limpiar el pin:", e);
+        }
+    }
+
+    // Cambia qué botón se ve azulito y cuál se ve gris
+    function actualizarBotonesUbicacion(modo) {
+        modoUbicacionActual = modo;
+        const btnGps = document.getElementById('btn-modo-gps');
+        const btnManual = document.getElementById('btn-modo-manual');
+        if (!btnGps || !btnManual) return;
+
+        if (modo === 'gps') {
+            btnGps.style.background = '#007bff';
+            btnGps.style.color = '#ffffff';
+            btnGps.style.boxShadow = '0 4px 10px rgba(0, 123, 255, 0.3)';
+
+            btnManual.style.background = '#e2e8f0';
+            btnManual.style.color = '#475569';
+            btnManual.style.boxShadow = 'none';
+        } else {
+            btnManual.style.background = '#007bff';
+            btnManual.style.color = '#ffffff';
+            btnManual.style.boxShadow = '0 4px 10px rgba(0, 123, 255, 0.3)';
+
+            btnGps.style.background = '#e2e8f0';
+            btnGps.style.color = '#475569';
+            btnGps.style.boxShadow = 'none';
+        }
+    }
+
+    // Muestra el aviso flotante indicando que debe pulsar el mapa
+    function mostrarAvisoModoManual() {
+        let aviso = document.getElementById('aviso-modo-manual');
+        if (!aviso) {
+            aviso = document.createElement('div');
+            aviso.id = 'aviso-modo-manual';
+            aviso.style.cssText = 'display: none; position: fixed; top: 85px; left: 50%; transform: translateX(-50%); z-index: 99999; background: #007bff; color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 14px; box-shadow: 0 8px 20px rgba(0, 123, 255, 0.4); font-family: sans-serif; transition: opacity 0.3s ease;';
+            document.body.appendChild(aviso);
+        }
+        aviso.innerHTML = '👆 Haz clic en cualquier lugar del mapa para ubicar el incidente';
+        aviso.style.display = 'block';
+        aviso.style.opacity = '1';
+
+        setTimeout(() => {
+            aviso.style.opacity = '0';
+            setTimeout(() => { aviso.style.display = 'none'; }, 300);
+        }, 4000);
+    }
+
+    // Escucha los clics en el mapa de Folium
+    window.addEventListener('message', function(event) {
+        if (event.data.lat && event.data.lon) {
+            // Si está en modo GPS, no dejamos poner pin y lo borramos de inmediato
+            if (modoUbicacionActual !== 'manual') {
+                setTimeout(limpiarPinManualDelMapa, 15);
+                return;
+            }
+
+            var lat = String(event.data.lat).replace(',', '.');
+            var lon = String(event.data.lon).replace(',', '.');
+            document.getElementById('lat').value = lat;
+            document.getElementById('lon').value = lon;
+
+            var textoUbicacion = document.getElementById('texto-ubicacion');
+            textoUbicacion.innerText = "📍 Buscando nombre de la calle...";
+            textoUbicacion.style.color = "#007bff";
+            textoUbicacion.style.fontWeight = "bold";
+
+            buscarNombreCalle(lat, lon, "📍 Ubicación manual");
+        }
+    });
+
+    function obtenerUbicacionGPS() {
+        var textoUbicacion = document.getElementById('texto-ubicacion');
+        if (!textoUbicacion) return;
+
+        actualizarBotonesUbicacion('gps');
+        limpiarPinManualDelMapa();
+        
+        textoUbicacion.innerText = "📡 Obteniendo ubicación GPS...";
+        textoUbicacion.style.color = "#ff9500";
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = String(position.coords.latitude).replace(',', '.');
+                    var lon = String(position.coords.longitude).replace(',', '.');
+
+                    document.getElementById('lat').value = lat;
+                    document.getElementById('lon').value = lon;
+
+                    textoUbicacion.innerText = "✅ GPS detectado. Buscando dirección...";
+                    textoUbicacion.style.color = "#28a745";
+
+                    buscarNombreCalle(lat, lon, "✅ Ubicación GPS");
+                },
+                function(error) {
+                    textoUbicacion.innerText = "⚠️ No se pudo detectar el GPS. Usa el modo manual.";
+                    textoUbicacion.style.color = "#dc3545";
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 8000,
+                    maximumAge: 0
+                }
+            );
+        } else {
+            textoUbicacion.innerText = "⚠️ Tu navegador no soporta GPS. Usa el modo manual.";
+            textoUbicacion.style.color = "#dc3545";
+        }
+    }
+
+    function activarModoManual() {
+        actualizarBotonesUbicacion('manual');
+
+        document.getElementById('lat').value = "";
+        document.getElementById('lon').value = "";
+        
+        var textoUbicacion = document.getElementById('texto-ubicacion');
+        if (textoUbicacion) {
+            textoUbicacion.innerText = "👆 Pulsa un punto en el mapa de la derecha...";
+            textoUbicacion.style.color = "#007bff";
+        }
+
+        mostrarAvisoModoManual();
+    }
+    
 
         var formAlerta = document.getElementById('form-alerta');
         if (formAlerta) {
@@ -285,6 +492,251 @@
                 }
             }); 
         }
+
+    function reproducirSonidoSirena(urgencia) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (urgencia.toLowerCase() === 'alta') {
+                // Sirena doble intensa para Urgencia Alta
+                [0, 0.35, 0.7].forEach(tiempo => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(880, ctx.currentTime + tiempo); // Tono agudo
+                    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + tiempo + 0.3);
+                    gain.gain.setValueAtTime(0.25, ctx.currentTime + tiempo);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + tiempo + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + tiempo);
+                    osc.stop(ctx.currentTime + tiempo + 0.3);
+                });
+            } else {
+                // Pitido suave para Media o Baja
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(520, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            }
+        } catch (e) {
+            console.log("Audio esperando interacción del usuario.");
+        }
+    }
+
+    function mostrarNotificacionFlotante(alerta) {
+        const caja = document.getElementById('notificacion-flotante');
+        const titulo = document.getElementById('notif-titulo');
+        const cuerpo = document.getElementById('notif-cuerpo');
+        const pie = document.getElementById('notif-pie');
+
+        caja.classList.remove('alerta-alta-anim');
+        const urg = alerta.urgencia.toLowerCase();
+
+        if (urg === 'alta') {
+            caja.style.background = 'linear-gradient(135deg, #d90429, #ef233c)';
+            caja.style.color = '#ffffff';
+            caja.style.border = '2px solid #ffffff';
+            caja.classList.add('alerta-alta-anim');
+            titulo.innerText = '🚨 ¡URGENCIA ALTA!: ' + alerta.categoria.toUpperCase();
+        } else if (urg === 'media') {
+            caja.style.background = 'linear-gradient(135deg, #f77f00, #fcbf49)';
+            caja.style.color = '#ffffff';
+            caja.style.border = 'none';
+            titulo.innerText = '⚠️ Alerta Media: ' + alerta.categoria;
+        } else {
+            caja.style.background = 'linear-gradient(135deg, #eab308, #fde047)';
+            caja.style.color = '#1f2937';
+            caja.style.border = 'none';
+            titulo.innerText = 'ℹ️ Aviso Preventivo: ' + alerta.categoria;
+        }
+
+        cuerpo.innerText = alerta.descripcion || 'Incidente reportado en las cercanías.';
+        pie.innerHTML = `<span>👤 Por: <b>${alerta.emisor}</b></span> <span>🕒 ${alerta.hora}</span>`;
+
+        caja.style.display = 'block';
+        reproducirSonidoSirena(alerta.urgencia);
+
+        // Ocultar automáticamente después de 10 segundos
+        setTimeout(() => {
+            caja.style.display = 'none';
+        }, 10000);
+    }
+
+    function cerrarNotificacion() {
+        document.getElementById('notificacion-flotante').style.display = 'none';
+    }
+
+    function verificarNuevasAlertas() {
+        fetch('/api/ultima-alerta/?t=' + Date.now(), { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.id) {
+                    if (primeraCarga) {
+                        ultimaAlertaConocida = data.id;
+                        primeraCarga = false;
+                    } else if (data.id !== ultimaAlertaConocida) {
+                        ultimaAlertaConocida = data.id;
+                        mostrarNotificacionFlotante(data);
+                    }
+                } else {
+                    primeraCarga = false;
+                }
+            })
+            .catch(err => console.error("Error consultando alertas:", err));
+    }
+    setInterval(verificarNuevasAlertas, 4000);
+    verificarNuevasAlertas();
     </script>
 </body>
+<script>
+    let ultimaAlertaConocida = null;
+    let primeraCarga = true;
+
+    function reproducirSonidoSirena(urgencia) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (String(urgencia).toLowerCase() === 'alta') {
+                [0, 0.35, 0.7].forEach(tiempo => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(880, ctx.currentTime + tiempo);
+                    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + tiempo + 0.3);
+                    gain.gain.setValueAtTime(0.25, ctx.currentTime + tiempo);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + tiempo + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + tiempo);
+                    osc.stop(ctx.currentTime + tiempo + 0.3);
+                });
+            } else {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(520, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            }
+        } catch (e) {
+            console.log("Sonido esperando interacción en la página.");
+        }
+    }
+
+    // Dibuja el nuevo pin directamente en el mapa de Folium sin recargar la página
+    function agregarPinAlertaEnVivo(alerta) {
+        try {
+            const iframe = document.querySelector('iframe');
+            if (iframe && iframe.contentWindow) {
+                const winMapa = iframe.contentWindow;
+                for (let key in winMapa) {
+                    if (key.startsWith('map_') && winMapa[key] && winMapa[key].addLayer) {
+                        const mapaLeaflet = winMapa[key];
+                        const L = winMapa.L;
+                        if (L && alerta.lat && alerta.lon) {
+                            const colorPin = String(alerta.urgencia).toLowerCase() === 'alta' ? '#d90429' : 
+                                             (String(alerta.urgencia).toLowerCase() === 'media' ? '#f77f00' : '#eab308');
+                            
+                            // Creamos un marcador circular llamativo y un marcador estándar en la coordenada exacta
+                            const nuevoPin = L.marker([alerta.lat, alerta.lon]).addTo(mapaLeaflet);
+                            nuevoPin.bindPopup(`<b>${alerta.categoria} (${alerta.urgencia})</b><br>${alerta.descripcion}<br><small>Por: ${alerta.emisor} a las ${alerta.hora}</small>`).openPopup();
+                            
+                            L.circleMarker([alerta.lat, alerta.lon], {
+                                radius: 18,
+                                color: colorPin,
+                                fillColor: colorPin,
+                                fillOpacity: 0.35
+                            }).addTo(mapaLeaflet);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error agregando pin en vivo:", e);
+        }
+    }
+
+    function mostrarNotificacionFlotante(alerta) {
+        let caja = document.getElementById('notificacion-flotante');
+        // Si por algún motivo no está el div en el HTML, lo creamos automáticamente
+        if (!caja) {
+            caja = document.createElement('div');
+            caja.id = 'notificacion-flotante';
+            caja.style.cssText = 'display: none; position: fixed; top: 25px; right: 25px; z-index: 99999; min-width: 320px; max-width: 380px; padding: 18px; border-radius: 14px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.35); font-family: sans-serif;';
+            caja.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong id="notif-titulo" style="font-size: 16px;">🚨 ALERTA</strong>
+                    <button onclick="document.getElementById('notificacion-flotante').style.display='none'" style="background: rgba(0,0,0,0.2); border: none; color: white; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;">✕</button>
+                </div>
+                <div id="notif-cuerpo" style="font-size: 14px; margin-bottom: 10px;"></div>
+                <div id="notif-pie" style="font-size: 12px; border-top: 1px solid rgba(255,255,255,0.25); padding-top: 6px; display: flex; justify-content: space-between;"></div>
+            `;
+            document.body.appendChild(caja);
+        }
+
+        const titulo = document.getElementById('notif-titulo');
+        const cuerpo = document.getElementById('notif-cuerpo');
+        const pie = document.getElementById('notif-pie');
+
+        const urg = String(alerta.urgencia).toLowerCase();
+        if (urg === 'alta') {
+            caja.style.background = 'linear-gradient(135deg, #d90429, #ef233c)';
+            caja.style.color = '#ffffff';
+            caja.style.border = '2px solid #ffffff';
+            titulo.innerText = '🚨 ¡URGENCIA ALTA!: ' + alerta.categoria.toUpperCase();
+        } else if (urg === 'media') {
+            caja.style.background = 'linear-gradient(135deg, #f77f00, #fcbf49)';
+            caja.style.color = '#ffffff';
+            caja.style.border = 'none';
+            titulo.innerText = '⚠️ Alerta Media: ' + alerta.categoria;
+        } else {
+            caja.style.background = 'linear-gradient(135deg, #eab308, #fde047)';
+            caja.style.color = '#1f2937';
+            caja.style.border = 'none';
+            titulo.innerText = 'ℹ️ Aviso Preventivo: ' + alerta.categoria;
+        }
+
+        cuerpo.innerText = alerta.descripcion;
+        pie.innerHTML = `<span>👤 Por: <b>${alerta.emisor}</b></span> <span>🕒 ${alerta.hora}</span>`;
+
+        caja.style.display = 'block';
+        reproducirSonidoSirena(alerta.urgencia);
+
+        setTimeout(() => {
+            caja.style.display = 'none';
+        }, 12000);
+    }
+
+    function verificarNuevasAlertas() {
+        fetch("{% url 'ultima_alerta' %}?t=" + Date.now(), { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.id) {
+                    if (primeraCarga) {
+                        ultimaAlertaConocida = data.id;
+                        primeraCarga = false;
+                    } else if (data.id !== ultimaAlertaConocida) {
+                        ultimaAlertaConocida = data.id;
+                        mostrarNotificacionFlotante(data);
+                        agregarPinAlertaEnVivo(data);
+                    }
+                } else {
+                    primeraCarga = false;
+                }
+            })
+            .catch(err => console.error("Error consultando nueva alerta:", err));
+    }
+
+    setInterval(verificarNuevasAlertas, 3000);
+    verificarNuevasAlertas();
+</script>
 </html>

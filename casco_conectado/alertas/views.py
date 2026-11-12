@@ -12,6 +12,7 @@ from .models import Perfil, Alerta
 from datetime import timedelta
 from django.utils import timezone
 from django.utils.timezone import localtime
+from django.http import JsonResponse
 
 def index(request):
     nombres_completos = {
@@ -91,7 +92,7 @@ def index(request):
     limite_tiempo = timezone.now() - timedelta(days=1)
     
     Alerta.objects.filter(fecha_creacion__lt=limite_tiempo).delete()
-    alertas_db = Alerta.objects.all().order_by('-fecha_creacion')
+    alertas_db = Alerta.objects.all().order_by('-fecha_creacion','-id')
     
     lista_alertas_historial = []
     
@@ -240,3 +241,28 @@ def login_view(request):
 def cerrar_sesion(request):
     logout(request)
     return redirect('index')
+
+def obtener_ultima_alerta(request):
+    ultima = Alerta.objects.order_by('-id').first()
+    if ultima:
+        if ultima.usuario:
+            nombre_completo = f"{ultima.usuario.first_name} {ultima.usuario.last_name}".strip()
+            emisor = nombre_completo if nombre_completo else ultima.usuario.username
+        else:
+            emisor = "Anónimo"
+            
+        hora_local = timezone.localtime(ultima.fecha_creacion).strftime('%H:%M')
+        texto_armas = "⚠️ Con armas involucradas" if ultima.armas else "Sin armas reportadas"
+        
+        return JsonResponse({
+            'id': ultima.id,
+            'categoria': ultima.categoria,
+            'urgencia': ultima.urgencia,
+            'lat': ultima.lat,
+            'lon': ultima.lon,
+            'direccion': ultima.direccion,
+            'descripcion': f"📍 {ultima.direccion} — {texto_armas}",
+            'emisor': emisor,
+            'hora': hora_local,
+        })
+    return JsonResponse({'id': None})
