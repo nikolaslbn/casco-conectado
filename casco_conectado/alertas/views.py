@@ -92,7 +92,7 @@ def index(request):
     limite_tiempo = timezone.now() - timedelta(days=1)
     
     Alerta.objects.filter(fecha_creacion__lt=limite_tiempo).delete()
-    alertas_db = Alerta.objects.all().order_by('-fecha_creacion','-id')
+    alertas_db = Alerta.objects.all().order_by('fecha_creacion','id')
     
     lista_alertas_historial = []
     
