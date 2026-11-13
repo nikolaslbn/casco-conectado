@@ -11,11 +11,11 @@ Aplicación web desarrollada en Django para el proyecto semestral **Casco Conect
 
 ## Características Principales
 
-1. **Emisión de Alertas Dinámicas:** Interfaz de doble panel para seleccionar categorías de incidentes (*Robo / Hurto, Vandalismo, Desorden, Emergencia, Incendio, Comercio Irregular*), presencia de armas y niveles de urgencia (*Alta, Media, Baja*)[cite: 15].
-2. **Mapa Interactivo:** Desarrollado con Folium, Leaflet y proveedor de teselas **Esri World Street Map**, acotado específicamente a la zona de Valparaíso con marcadores personalizados mediante `DivIcon` y emojis representativos[cite: 15].
-3. **Geolocalización y Geocodificación Inversa:** Detección automática mediante GPS o selección manual en el mapa, integrados con la API pública de OpenStreetMap (Nominatim) para traducir automáticamente las coordenadas a direcciones, calles e intersecciones reales de Valparaíso[cite: 15].
+1. **Emisión de Alertas Dinámicas:** Interfaz de doble panel para seleccionar categorías de incidentes (*Robo / Hurto, Vandalismo, Desorden, Emergencia, Incendio, Comercio Irregular*), presencia de armas y niveles de urgencia (*Alta, Media, Baja*).
+2. **Mapa Interactivo:** Desarrollado con Folium, Leaflet y proveedor de teselas **Esri World Street Map**, acotado específicamente a la zona de Valparaíso con marcadores personalizados mediante `DivIcon` y emojis representativos.
+3. **Geolocalización y Geocodificación Inversa:** Detección automática mediante GPS o selección manual en el mapa, integrados con la API pública de OpenStreetMap (Nominatim) para traducir automáticamente las coordenadas a direcciones, calles e intersecciones reales de Valparaíso.
 4. **Notificaciones y Actualización en Vivo:** Sistema en tiempo real que emite alertas flotantes con sonido de sirena y dibuja el nuevo pin directamente en el mapa sin recargar la página, destacándolo con una animación de radar expansivo y centrado de cámara automático.
-5. **Registro Histórico:** Pestaña de historial con tarjetas dinámicas organizadas en orden cronológico inverso, mostrando iconos, fechas, horas, direcciones exactas y niveles de urgencia con códigos de color[cite: 15].
+5. **Registro Histórico:** Pestaña de historial con tarjetas dinámicas organizadas en orden cronológico inverso, mostrando iconos, fechas, horas, direcciones exactas y niveles de urgencia con códigos de color.
 
 ## Tecnologías Utilizadas
 
@@ -65,8 +65,8 @@ Sigue estos pasos en tu terminal para clonar el repositorio, configurar el entor
 
 ## Datos para Probar la Funcionalidad Corazón
 
-1. Ingresa a la aplicación en `http://127.0.0.1:8000/` y haz clic en la pestaña superior "EMITIR ALERTA"[cite: 14].
-2. Selecciona una categoría de incidente (por ejemplo, *Robo / Hurto* o *Comercio Irregular*)[cite: 14].
-3. Marca la casilla si existen armas involucradas y selecciona un nivel de urgencia (*Alta, Media* o *Baja*)[cite: 14].
-4. En la sección "Ubicación del Incidente", presiona el botón azul **"🎯 Usar mi GPS"** para detectar tu calle automáticamente, o presiona el botón gris **"📍 Elegir en el mapa"** y haz clic en cualquier sector del mapa interactivo de Valparaíso para fijar la ubicación exacta del incidente[cite: 14].
-5. Presiona el botón "Confirmar y Enviar Alerta" para procesar la información[cite: 14]. Al instante visualizarás la tarjeta de notificación flotante, escucharás la alarma sonora, verás el marcador en tiempo real con su animación de radar sobre el mapa y comprobarás el registro automático con su respectiva dirección y hora en la pestaña "HISTORIAL"[cite: 14].
+1. Ingresa a la aplicación en `http://127.0.0.1:8000/` y haz clic en la pestaña superior "EMITIR ALERTA".
+2. Selecciona una categoría de incidente (por ejemplo, *Robo / Hurto* o *Comercio Irregular*).
+3. Marca la casilla si existen armas involucradas y selecciona un nivel de urgencia (*Alta, Media* o *Baja*).
+4. En la sección "Ubicación del Incidente", presiona el botón azul **"🎯 Usar mi GPS"** para detectar tu calle automáticamente, o presiona el botón gris **"📍 Elegir en el mapa"** y haz clic en cualquier sector del mapa interactivo de Valparaíso para fijar la ubicación exacta del incidente.
+5. Presiona el botón "Confirmar y Enviar Alerta" para procesar la información. Al instante visualizarás la tarjeta de notificación flotante, escucharás la alarma sonora, verás el marcador en tiempo real con su animación de radar sobre el mapa y comprobarás el registro automático con su respectiva dirección y hora en la pestaña "HISTORIAL".
